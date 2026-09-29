@@ -48,8 +48,15 @@ O app está no ar em **https://gerenciagro.rafaprimak1.workers.dev**
 Link de convite, que já configura a chave no aparelho:
 `https://gerenciagro.rafaprimak1.workers.dev/?chave=<CHAVE>`
 
+**Publicação automática:** o Worker está ligado ao repositório no GitHub (Workers Builds).
+Todo `git push` na branch `main` faz a Cloudflare instalar as dependências e rodar `npx wrangler deploy`.
+Se criar uma migração nova em `migrations/`, aplique no banco antes do push:
+`npx wrangler d1 migrations apply gerenciagro --remote`.
+
+Comandos manuais:
+
 ```bash
-npm run cf:deploy                                # publica alterações (aplica migrações do banco e sobe o app)
+npm run cf:deploy                                # publica direto do PC (aplica migrações e sobe o app)
 npm run cf:dev                                   # roda o Worker localmente, com banco D1 simulado
 npx wrangler secret put SYNC_TOKEN               # troca a chave de sincronização
 npx wrangler secret put ANTHROPIC_API_KEY        # ativa a leitura de fotos por IA
