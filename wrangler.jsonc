@@ -1,0 +1,28 @@
+// Configuração da Cloudflare (Workers + D1). Publicar: npm run cf:deploy
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gerenciagro",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  // Arquivos do app. As rotas /api/* passam pelo Worker primeiro.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gerenciagro",
+      "database_id": "c6b36736-e4e2-4c6d-a07c-28e25dd72045",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": { "enabled": true }
+  // Segredos (não ficam neste arquivo):
+  //   npx wrangler secret put SYNC_TOKEN         senha de sincronização
+  //   npx wrangler secret put ANTHROPIC_API_KEY  opcional: leitura de fotos por IA
+}

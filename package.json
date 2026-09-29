@@ -1,0 +1,29 @@
+{
+  "name": "gerenciagro",
+  "version": "1.0.0",
+  "description": "GerenciAgro - interpretação de análise de solo e recomendação de adubação (offline-first)",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "postinstall": "node scripts/copy-vendor.js",
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/*.test.js",
+    "cf:dev": "wrangler d1 migrations apply gerenciagro --local && wrangler dev",
+    "cf:deploy": "wrangler d1 migrations apply gerenciagro --remote && wrangler deploy"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@tesseract.js-data/por": "^1.0.0",
+    "express": "^5.2.1",
+    "pdfjs-dist": "^6.3.289",
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "^7.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.143.0"
+  }
+}
