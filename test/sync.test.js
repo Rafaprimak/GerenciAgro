@@ -31,5 +31,6 @@ test('sincronização: envia, recebe e resolve conflito pelo mais recente', () =
   // exclusão propaga
   const del = db.sincronizar(final.seq, [{ collection: 'analises', id: 'x1', updatedAt: 4000, deleted: true, data: {} }], COL);
   assert.equal(del.changes[0].deleted, true);
+  assert.deepEqual(del.changes[0].data, {}, 'conteúdo da análise excluída não fica no servidor');
   db.fechar();
 });

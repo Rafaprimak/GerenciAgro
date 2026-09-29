@@ -439,3 +439,9 @@ details.solto { border: 0; margin: 0; padding: 0; }
 .la-dose { text-align: right; white-space: nowrap; color: var(--muted); font-size: .8125rem; }
 .la-dose b { font-size: 1.25rem; color: var(--text); font-variant-numeric: tabular-nums; }
 .la-extra { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 6px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: .8125rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast.show { pointer-events: auto; }
+.toast-acao { border: 0; background: none; padding: 4px 2px; color: #8fe0b0; font: inherit; font-weight: 700; cursor: pointer; }
+.barra-sel .btn.perigo-escuro { background: transparent; border-color: rgba(255,255,255,.2); color: #ffb4ab; }
+.barra-sel .btn.perigo-escuro:hover { background: rgba(255,255,255,.08); }
+.toast { width: max-content; } .toast span { white-space: nowrap; }

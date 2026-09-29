@@ -69,6 +69,12 @@ export async function excluir(colecao, id) {
   return salvar(colecao, { ...r, deleted: true });
 }
 
+export async function restaurar(colecao, id) {
+  const r = await obter(colecao, id);
+  if (!r) return;
+  return salvar(colecao, { ...r, deleted: false });
+}
+
 // Grava registro vindo do servidor (não marca como sujo)
 export async function gravarDoServidor(colecao, registro) {
   await tx(colecao, 'readwrite', (s) => req2p(s.put({ ...registro, _dirty: 0 })));

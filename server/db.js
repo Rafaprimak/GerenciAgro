@@ -41,7 +41,8 @@ export function abrirBanco(arquivo) {
           const atual = buscar.get(c.collection, c.id);
           const updatedAt = Number(c.updatedAt) || Date.now();
           if (atual && atual.updated_at > updatedAt) continue; // servidor tem versão mais nova
-          gravar.run(c.collection, c.id, JSON.stringify(c.data ?? {}), updatedAt, c.deleted ? 1 : 0, ++seq);
+          // excluído: guarda só a marca (os outros aparelhos precisam saber que sumiu), sem o conteúdo
+          gravar.run(c.collection, c.id, JSON.stringify(c.deleted ? {} : c.data ?? {}), updatedAt, c.deleted ? 1 : 0, ++seq);
         }
         db.exec('COMMIT');
       } catch (e) {

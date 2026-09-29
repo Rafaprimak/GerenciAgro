@@ -61,7 +61,7 @@ export async function sincronizar() {
       if (!store.COLECOES.includes(rec.collection)) continue;
       const local = await store.obter(rec.collection, rec.id);
       const remoto = { ...rec.data, id: rec.id, updatedAt: rec.updatedAt, deleted: !!rec.deleted };
-      if (!local || rec.updatedAt > local.updatedAt || (!local._dirty && rec.updatedAt >= local.updatedAt)) {
+      if (!local || rec.updatedAt > local.updatedAt) {
         if (!local || local.updatedAt !== rec.updatedAt) recebidos++;
         await store.gravarDoServidor(rec.collection, remoto);
       }

@@ -1,6 +1,6 @@
 // Service worker: guarda o app no aparelho para abrir sem internet.
 // Ao mudar arquivos do app, aumente VERSAO para forçar a atualização.
-const VERSAO = 'v3';
+const VERSAO = 'v4';
 const CACHE_APP = `gerenciagro-app-${VERSAO}`;
 const CACHE_VENDOR = 'gerenciagro-vendor';
 

@@ -27,7 +27,8 @@ async function sincronizar(db, since, changes) {
       WHERE excluded.updated_at >= records.updated_at`);
     // batch = uma transação só
     await db.batch(validas.map((c) =>
-      upsert.bind(c.collection, c.id, JSON.stringify(c.data ?? {}), Number(c.updatedAt) || Date.now(), c.deleted ? 1 : 0)));
+      // excluído: guarda só a marca (os outros aparelhos precisam saber que sumiu), sem o conteúdo
+      upsert.bind(c.collection, c.id, JSON.stringify(c.deleted ? {} : c.data ?? {}), Number(c.updatedAt) || Date.now(), c.deleted ? 1 : 0)));
   }
   const { results } = await db
     .prepare('SELECT collection, id, data, updated_at, deleted, seq FROM records WHERE seq > ?1 ORDER BY seq LIMIT 5000')

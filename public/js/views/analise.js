@@ -5,7 +5,7 @@ import { CULTURAS, getCultura, modalidadeId } from '../data/culturas.js';
 import { CRITERIOS_P, CRITERIOS_K, CLASSES_ARGILA, classeArgila } from '../data/interpretacao.js';
 import { extrairArquivo, iaDisponivel } from '../extract/index.js';
 import { textoResumo } from './relatorio.js';
-import { esc, num, fmt, fmtInput, moeda, chipNivel, toast, debounce, confirmar, aviso } from '../ui.js';
+import { esc, num, fmt, fmtInput, moeda, chipNivel, toast, debounce, aviso } from '../ui.js';
 import { icone } from '../icons.js';
 
 const IDENT = [
@@ -105,6 +105,9 @@ export async function render(el, { id, aba = 'laudo' }) {
         <div class="cab-txt">
           <h1 id="titulo">${esc(a.info?.talhao || 'Nova análise')}</h1>
           <div class="cab-sub" id="subtitulo">${esc(subtitulo())}</div>
+        </div>
+        <div class="cab-acoes">
+          <button class="btn fantasma icone perigo" data-acao="excluir" title="Excluir análise" aria-label="Excluir análise">${icone('lixo', 20)}</button>
         </div>
       </div>
       <ol class="etapas" aria-label="Etapas">
@@ -472,7 +475,6 @@ export async function render(el, { id, aba = 'laudo' }) {
       <div class="acoes">
         <a class="btn primario" href="#/relatorio/${esc(a.id)}">${icone('arquivo', 18)}Ver relatório</a>
         <button class="btn" data-acao="compartilhar">${icone('compartilhar', 18)}Compartilhar</button>
-        <button class="btn fantasma perigo" data-acao="excluir">${icone('lixo', 18)}Excluir</button>
       </div>`;
   }
 
@@ -537,10 +539,17 @@ export async function render(el, { id, aba = 'laudo' }) {
     const b = e.target.closest('[data-acao]');
     if (!b || b.tagName === 'INPUT') return;
     if (b.dataset.acao === 'excluir') {
-      if (!confirmar('Excluir esta análise? Ela também será removida do servidor na próxima sincronização.')) return;
-      await store.excluir('analises', a.id);
-      toast('Análise excluída');
+      const idExcluido = a.id;
+      a.deleted = true; // evita que um salvamento pendente traga a análise de volta
+      await store.excluir('analises', idExcluido);
       location.hash = '#/';
+      toast('Análise excluída', '', {
+        rotulo: 'Desfazer',
+        fn: async () => {
+          await store.restaurar('analises', idExcluido);
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        },
+      });
     }
     if (b.dataset.acao === 'usar-combo') {
       const r = recomendar(a, cfg);
@@ -563,6 +572,18 @@ export async function render(el, { id, aba = 'laudo' }) {
   };
 
   desenhar();
+
+  // Ao sair: análise criada e deixada em branco é descartada (não polui a lista)
+  return () => {
+    if (a.deleted || !estaVazia(a)) return;
+    a.deleted = true;
+    store.excluir('analises', a.id);
+  };
+}
+
+function estaVazia(a) {
+  const preenchido = (o) => Object.values(o || {}).some((v) => v != null && v !== '');
+  return !preenchido(a.info) && !preenchido(a.solo) && !a.plano?.culturaId;
 }
 
 function paraISO(v) {

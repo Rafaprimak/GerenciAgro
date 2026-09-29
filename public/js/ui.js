@@ -50,7 +50,8 @@ export function chipNivel(nivel, inverso = false) {
 }
 
 let toastTimer;
-export function toast(msg, tipo = '') {
+// acao opcional: { rotulo: 'Desfazer', fn: () => ... } mostra um botão no aviso
+export function toast(msg, tipo = '', acao = null) {
   let el = document.getElementById('toast');
   if (!el) {
     el = document.createElement('div');
@@ -58,10 +59,17 @@ export function toast(msg, tipo = '') {
     el.setAttribute('role', 'status');
     document.body.appendChild(el);
   }
+  const fechar = () => (el.className = 'toast');
   el.className = `toast show ${tipo}`;
-  el.textContent = msg;
+  el.innerHTML = `<span>${esc(msg)}</span>${acao ? `<button type="button" class="toast-acao">${esc(acao.rotulo)}</button>` : ''}`;
+  if (acao) {
+    el.querySelector('.toast-acao').onclick = () => {
+      fechar();
+      acao.fn();
+    };
+  }
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (el.className = 'toast'), 3200);
+  toastTimer = setTimeout(fechar, acao ? 6000 : 3200);
 }
 
 export function debounce(fn, ms) {

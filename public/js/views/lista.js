@@ -2,7 +2,7 @@ import * as store from '../store.js';
 import { getConfig } from '../config.js';
 import { recomendar, nivelDe } from '../calc.js';
 import { getCultura } from '../data/culturas.js';
-import { esc, fmt, dataBR, chipNivel } from '../ui.js';
+import { esc, fmt, dataBR, chipNivel, toast, confirmar } from '../ui.js';
 import { icone } from '../icons.js';
 
 const selecionadas = new Set();
@@ -21,18 +21,19 @@ export async function render(el) {
         <div class="cab-sub">${lista.length ? `${lista.length} ${lista.length === 1 ? 'análise' : 'análises'}` : 'Interpretação e recomendação de adubação'}</div>
       </div>
       <div class="cab-acoes">
-        ${lista.length ? `<button class="btn fantasma" data-acao="selecionar">${icone(selecionando ? 'x' : 'selecionar', 18)}<span>${selecionando ? 'Cancelar' : 'Relatório'}</span></button>` : ''}
+        ${lista.length ? `<button class="btn fantasma" data-acao="selecionar">${icone(selecionando ? 'x' : 'selecionar', 18)}<span>${selecionando ? 'Cancelar' : 'Selecionar'}</span></button>` : ''}
         <a class="btn primario" href="#/nova">${icone('mais', 18)}<span>Nova</span></a>
       </div>
     </div>
     ${lista.length > 3 ? `
       <label class="barra-busca">${icone('busca', 18)}<span class="sr">Buscar</span>
         <input type="search" placeholder="Buscar talhão, propriedade ou produtor"></label>` : ''}
-    ${selecionando ? `<p class="muted small">Toque nas análises que devem entrar no relatório.</p>` : ''}
+    ${selecionando ? `<p class="muted small">Toque nas análises para gerar um relatório ou excluir.</p>` : ''}
     ${lista.length ? `<div class="lista ${selecionando ? 'selecionando' : ''}">${lista.map((a) => card(a, cfg)).join('')}</div>` : vazio()}
     <div class="barra-sel ${selecionando && selecionadas.size ? 'show' : ''}" role="region" aria-label="Seleção">
       <span><b class="qtd-sel">${selecionadas.size}</b> selecionada(s)</span>
-      <button class="btn primario mini" data-acao="relatorio">${icone('arquivo', 16)}Gerar relatório</button>
+      <button class="btn mini perigo-escuro" data-acao="excluir-sel">${icone('lixo', 16)}Excluir</button>
+      <button class="btn primario mini" data-acao="relatorio">${icone('arquivo', 16)}Relatório</button>
     </div>`;
 
   el.querySelector('.barra-busca input')?.addEventListener('input', (e) => {
@@ -49,6 +50,10 @@ export async function render(el) {
     }
     if (b?.dataset.acao === 'relatorio') {
       location.hash = `#/relatorio/${[...selecionadas].join(',')}`;
+      return;
+    }
+    if (b?.dataset.acao === 'excluir-sel') {
+      excluirSelecionadas(el);
       return;
     }
     const item = e.target.closest('.item');
@@ -70,6 +75,24 @@ export async function render(el) {
       e.target.click();
     }
   };
+}
+
+async function excluirSelecionadas(el) {
+  const ids = [...selecionadas];
+  const n = ids.length;
+  if (!n) return;
+  if (n > 1 && !confirmar(`Excluir ${n} análises?`)) return;
+  for (const id of ids) await store.excluir('analises', id);
+  selecionadas.clear();
+  selecionando = false;
+  await render(el);
+  toast(n === 1 ? 'Análise excluída' : `${n} análises excluídas`, '', {
+    rotulo: 'Desfazer',
+    fn: async () => {
+      for (const id of ids) await store.restaurar('analises', id);
+      if (el.isConnected) render(el);
+    },
+  });
 }
 
 function card(a, cfg) {
