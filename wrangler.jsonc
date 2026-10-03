@@ -23,6 +23,7 @@
   ],
   "observability": { "enabled": true }
   // Segredos (não ficam neste arquivo):
-  //   npx wrangler secret put SYNC_TOKEN         senha de sincronização
+  //   npx wrangler secret put DATA_KEY           cifra dos dados no banco (obrigatória)
+  //   npx wrangler secret put RESEND_API_KEY     opcional: e-mail de "esqueci a senha"
   //   npx wrangler secret put ANTHROPIC_API_KEY  opcional: leitura de fotos por IA
 }

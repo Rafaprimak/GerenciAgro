@@ -5,8 +5,6 @@
 // O resultado sempre passa pela tela de conferência antes de ser usado.
 
 import { parseItens, parseTextoGenerico, normalizarSolo, montarLinhas } from './parsers.js';
-import { servidorBase } from '../sync.js';
-import * as store from '../store.js';
 
 const VENDOR = new URL('../../vendor/', import.meta.url).href;
 
@@ -41,7 +39,7 @@ export async function iaDisponivel() {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 4000);
-    const r = await fetch(`${await servidorBase()}/api/health`, { signal: ctrl.signal, cache: 'no-store' });
+    const r = await fetch('/api/health', { signal: ctrl.signal, cache: 'no-store' });
     clearTimeout(t);
     return r.ok && (await r.json()).ai === true;
   } catch {
@@ -158,12 +156,9 @@ async function extrairComIA(file, mediaType, progresso) {
     dados = await paraBase64(blob);
     tipo = 'image/jpeg';
   }
-  const headers = { 'Content-Type': 'application/json' };
-  const token = await store.getMeta('syncToken', '');
-  if (token) headers['X-Sync-Token'] = token;
-  const resp = await fetch(`${await servidorBase()}/api/extract`, {
+  const resp = await fetch('/api/extract', {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mediaType: tipo, data: dados }),
   });
   if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `erro ${resp.status}`);

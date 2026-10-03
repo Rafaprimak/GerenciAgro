@@ -1,12 +1,12 @@
 import * as store from '../store.js';
 import * as sync from '../sync.js';
+import * as auth from '../auth.js';
 import { prepararOcrOffline, iaDisponivel } from '../extract/index.js';
 import { icone } from '../icons.js';
 import { esc, toast, confirmar } from '../ui.js';
 
 export async function render(el) {
-  const serverUrl = await store.getMeta('serverUrl', '');
-  const token = await store.getMeta('syncToken', '');
+  const usuario = auth.usuarioAtual();
   const ocrPronto = await store.getMeta('ocrOffline', false);
 
   async function desenharStatus() {
@@ -23,19 +23,36 @@ export async function render(el) {
   }
 
   el.innerHTML = `
-    <div class="cab"><div class="cab-txt"><h1>Ajustes</h1><div class="cab-sub">Sincronização, leitura de fotos e backup</div></div></div>
+    <div class="cab"><div class="cab-txt"><h1>Ajustes</h1><div class="cab-sub">Conta, sincronização, leitura de fotos e backup</div></div></div>
+    <section class="card">
+      <h2>Conta</h2>
+      <dl class="dl-linhas">
+        <div><dt>Nome</dt><dd>${esc(usuario.nome)}</dd></div>
+        <div><dt>E-mail</dt><dd>${esc(usuario.email)}</dd></div>
+      </dl>
+      <form id="formSenha" class="auth-form" style="margin-top:14px" hidden>
+        <label class="campo"><span>Senha atual</span><input id="senhaAtual" type="password" required autocomplete="current-password"></label>
+        <div class="grid-2">
+          <label class="campo"><span>Nova senha <small>mínimo ${auth.SENHA_MIN} caracteres</small></span>
+            <input id="senhaNova" type="password" required minlength="${auth.SENHA_MIN}" autocomplete="new-password"></label>
+          <label class="campo"><span>Repita a nova senha</span>
+            <input id="senhaNova2" type="password" required minlength="${auth.SENHA_MIN}" autocomplete="new-password"></label>
+        </div>
+        <div class="acoes" style="margin:0">
+          <button class="btn primario" type="submit">Salvar nova senha</button>
+          <button class="btn fantasma" type="button" data-acao="senha">Cancelar</button>
+        </div>
+      </form>
+      <div class="acoes" style="margin-bottom:0" id="acoesConta">
+        <button class="btn" data-acao="senha">Trocar senha</button>
+        <button class="btn perigo" data-acao="sair">Sair da conta</button>
+      </div>
+    </section>
     <section class="card">
       <h2>Sincronização</h2>
       <div id="syncInfo"></div>
-      <div class="grid-2" style="margin-top:14px">
-        <label class="campo"><span>Endereço do servidor <small>vazio = o mesmo deste app</small></span>
-          <input id="serverUrl" type="url" placeholder="https://..." value="${esc(serverUrl)}"></label>
-        <label class="campo"><span>Chave de acesso <small>se o servidor exigir</small></span>
-          <input id="syncToken" type="password" autocomplete="off" value="${esc(token)}"></label>
-      </div>
       <div class="acoes" style="margin-bottom:0">
         <button class="btn primario" data-acao="sync">${icone('sync', 18)}Sincronizar agora</button>
-        <button class="btn" data-acao="salvar-srv">Salvar endereço e chave</button>
       </div>
     </section>
     <section class="card">
@@ -76,12 +93,14 @@ export async function render(el) {
     const b = e.target.closest('[data-acao]');
     if (!b) return;
     const acao = b.dataset.acao;
-    if (acao === 'salvar-srv') {
-      await store.setMeta('serverUrl', el.querySelector('#serverUrl').value.trim());
-      await store.setMeta('syncToken', el.querySelector('#syncToken').value.trim());
-      toast('Configuração salva');
-      sync.sincronizar();
+    if (acao === 'senha') {
+      const form = el.querySelector('#formSenha');
+      form.hidden = !form.hidden;
+      el.querySelector('#acoesConta').hidden = !form.hidden;
+      form.reset();
+      if (!form.hidden) form.querySelector('input').focus();
     }
+    if (acao === 'sair') await sairDaConta(b);
     if (acao === 'sync') {
       if (!navigator.onLine) return toast('Sem internet no momento', 'erro');
       await sync.sincronizar();
@@ -111,6 +130,25 @@ export async function render(el) {
       URL.revokeObjectURL(a.href);
     }
   };
+  el.querySelector('#formSenha').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const nova = el.querySelector('#senhaNova').value;
+    if (nova !== el.querySelector('#senhaNova2').value) return toast('As duas senhas novas não são iguais', 'erro');
+    const botao = form.querySelector('[type=submit]');
+    botao.disabled = true;
+    try {
+      await auth.trocarSenha(usuario.email, el.querySelector('#senhaAtual').value, nova);
+      form.reset();
+      form.hidden = true;
+      el.querySelector('#acoesConta').hidden = false;
+      toast('Senha trocada. Os outros aparelhos vão pedir a senha nova.');
+    } catch (err) {
+      toast(err.message, 'erro');
+    } finally {
+      botao.disabled = false;
+    }
+  };
   el.onchange = async (e) => {
     if (e.target.id !== 'importar' || !e.target.files[0]) return;
     try {
@@ -124,4 +162,22 @@ export async function render(el) {
     }
   };
   return () => sync.estado.removeEventListener('mudou', onSync);
+}
+
+// Envia o que falta, avisa se algo ficaria para trás e apaga os dados deste usuário do aparelho
+async function sairDaConta(botao) {
+  botao.disabled = true;
+  try {
+    await sync.sincronizar();
+    const { pendentes } = await sync.info();
+    if (pendentes && !confirmar(`${pendentes} alteração(ões) ainda não foram enviadas ao servidor e serão perdidas se você sair agora.
+
+Sair mesmo assim?`)) return;
+    await auth.sair();
+    await store.limparTudo();
+    auth.esquecerUsuario();
+    location.replace(location.pathname); // recarrega sem usuário: abre a tela de entrar
+  } finally {
+    botao.disabled = false;
+  }
 }

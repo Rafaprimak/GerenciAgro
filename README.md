@@ -3,6 +3,8 @@
 App de celular (PWA) para interpretar análise de solo e recomendar calagem e adubação,
 seguindo o **Manual de Adubação e Calagem para o Estado do Paraná**.
 Funciona **sem internet**. Quando a conexão volta, sincroniza os dados com o servidor.
+Cada pessoa tem a **própria conta** (e-mail e senha): as análises e os preços de um usuário
+não aparecem para os outros.
 
 ## O que o app faz (os 7 passos da planilha)
 
@@ -27,26 +29,44 @@ Requer Node.js 22.5 ou mais novo (usa o SQLite embutido do Node).
 ```bash
 npm install      # instala e copia pdf.js e OCR para public/vendor
 npm start        # http://localhost:3000
-npm test         # testes de cálculo, leitura de PDF e sincronização
+npm test         # testes de cálculo, leitura de PDF, contas e sincronização
 ```
 
-Variáveis de ambiente (opcionais):
+Variáveis de ambiente. As chaves ficam **só no servidor** (segredos da Cloudflare ou `.dev.vars`,
+fora do git); o app no celular nunca recebe nenhuma delas.
 
 | Variável | Para quê |
 |---|---|
-| `PORT` | Porta do servidor (padrão 3000) |
-| `SYNC_TOKEN` | Senha exigida para sincronizar. Informe a mesma em Ajustes → Chave de acesso |
+| `DATA_KEY` | **Obrigatória.** Chave que cifra os dados no banco (base64 de 32 bytes). No Node, se faltar, é criada em `data/chave-dados`. **Perder essa chave = perder os dados do servidor**: guarde uma cópia |
 | `ANTHROPIC_API_KEY` | Ativa a leitura de fotos por IA (Claude). Sem ela, fotos usam só o OCR offline |
-| `DB_FILE` | Caminho do banco SQLite (padrão `data/gerenciagro.db`) |
+| `RESEND_API_KEY` | Envia o e-mail de "esqueci a senha" pelo [Resend](https://resend.com). Sem ela, o link aparece no log do servidor |
+| `EMAIL_FROM` | Remetente do e-mail, ex.: `GerenciAgro <nao-responda@seudominio.com.br>` (domínio verificado no Resend) |
+| `APP_URL` | Endereço do app usado no link do e-mail (padrão: o endereço da requisição; no Node, `http://localhost:PORT`) |
+| `PORT` | Porta do servidor Node (padrão 3000) |
+| `DB_FILE` | Caminho do banco SQLite do Node (padrão `data/gerenciagro.db`) |
+
+Gerar uma `DATA_KEY`: `node -e "console.log(crypto.randomBytes(32).toString('base64'))"`
+
+## Contas e segurança
+
+- **Entrar, criar conta, esqueci a senha** (link por e-mail, vale 30 min, uso único) e **trocar senha** em Ajustes.
+- **Senha**: nunca trafega nem é guardada como digitada. O aparelho aplica PBKDF2-SHA256 com 600 mil rodadas;
+  o servidor aplica outro PBKDF2 com sal aleatório por cima.
+- **Sessão**: cookie `HttpOnly`, `Secure`, `SameSite=Strict`, 60 dias. O banco guarda só o SHA-256 do token.
+  Trocar ou redefinir a senha encerra as sessões nos outros aparelhos.
+- **Dados no servidor**: cifrados com AES-256-GCM, chave própria de cada usuário (derivada da `DATA_KEY`).
+  Cada usuário só lê e grava os próprios registros.
+- **Dados no celular**: um banco local separado por usuário; ao **sair da conta**, os dados dela são apagados do aparelho
+  (o app avisa se ainda há alterações não enviadas).
+- **Limites**: 10 senhas erradas por e-mail a cada 15 min, cadastros e pedidos de senha limitados por IP,
+  60 leituras por IA por hora por usuário (protege o custo da chave da IA).
+- **Dados de antes das contas**: ao entrar pela primeira vez, o app oferece passar para a conta as análises
+  que já estavam no aparelho. No servidor, os registros antigos ficam sem dono (`user_id = ''`) e não aparecem para ninguém.
 
 ## Publicado na Cloudflare
 
 O app está no ar em **https://gerenciagro.rafaprimak1.workers.dev**
-(Cloudflare Workers + banco D1, plano gratuito). A chave de sincronização está no arquivo
-`.chave-sincronizacao` (fora do git).
-
-Link de convite, que já configura a chave no aparelho:
-`https://gerenciagro.rafaprimak1.workers.dev/?chave=<CHAVE>`
+(Cloudflare Workers + banco D1, plano gratuito). Cada pessoa cria a própria conta no app.
 
 **Publicação automática:** o Worker está ligado ao repositório no GitHub (Workers Builds).
 Todo `git push` na branch `main` faz a Cloudflare instalar as dependências e rodar `npx wrangler deploy`.
@@ -58,8 +78,10 @@ Comandos manuais:
 ```bash
 npm run cf:deploy                                # publica direto do PC (aplica migrações e sobe o app)
 npm run cf:dev                                   # roda o Worker localmente, com banco D1 simulado
-npx wrangler secret put SYNC_TOKEN               # troca a chave de sincronização
+npx wrangler secret put DATA_KEY                 # chave que cifra os dados (obrigatória, não trocar depois)
 npx wrangler secret put ANTHROPIC_API_KEY        # ativa a leitura de fotos por IA
+npx wrangler secret put RESEND_API_KEY           # envia o e-mail de "esqueci a senha"
+npx wrangler secret put EMAIL_FROM               # remetente do e-mail
 npx wrangler d1 execute gerenciagro --remote --command "SELECT COUNT(*) FROM records"   # consulta o banco
 ```
 
@@ -84,10 +106,13 @@ public/            app (roda no celular)
   js/calc.js         motor de cálculo (passos 2 a 7)
   js/data/           tabelas do manual (interpretação, culturas, adubos)
   js/extract/        leitura de PDF/foto
-  js/store.js        banco local (IndexedDB)
+  js/store.js        banco local (IndexedDB), um por usuário
   js/sync.js         sincronização
+  js/auth.js         conta (entrar, cadastro, senha)
   sw.js              cache para uso offline
-server/            servidor local (Express + SQLite + leitura por IA)
+server/api.js      rotas /api (contas, sync, IA), as mesmas no Node e na Cloudflare
+server/seguranca.js  hash de senha, tokens e cifra dos dados
+server/            servidor local (Express + SQLite)
 worker/            servidor na Cloudflare (Workers + D1)
 migrations/        estrutura do banco D1
 test/              testes

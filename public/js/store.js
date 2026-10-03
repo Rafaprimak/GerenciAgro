@@ -1,17 +1,26 @@
 // Banco local (IndexedDB). Tudo funciona offline; registros alterados ficam marcados
 // com _dirty = 1 até o sync enviar para o servidor.
+// Cada usuário tem o próprio banco no aparelho (gerenciagro-<id do usuário>).
 
-const DB_NAME = 'gerenciagro';
+const LEGADO = 'gerenciagro'; // banco de antes das contas (um só para todos)
 const DB_VERSION = 1;
 export const COLECOES = ['analises', 'config'];
 
+let dbNome = null;
 let dbPromise;
 export const eventos = new EventTarget();
 
+// Escolhe o banco do usuário conectado. Precisa ser chamado antes de qualquer leitura.
+export function usarUsuario(userId) {
+  dbNome = `${LEGADO}-${userId}`;
+  dbPromise = null;
+}
+
 function abrir() {
+  if (!dbNome) return Promise.reject(new Error('Nenhum usuário conectado'));
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      const req = indexedDB.open(dbNome, DB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
         for (const c of COLECOES) if (!db.objectStoreNames.contains(c)) db.createObjectStore(c, { keyPath: 'id' });
@@ -108,9 +117,49 @@ export async function setMeta(k, v) {
   await tx('meta', 'readwrite', (s) => req2p(s.put({ k, v })));
 }
 
+// Apaga o banco do usuário conectado deste aparelho (ao sair da conta)
 export async function limparTudo() {
   const db = await abrir();
   db.close();
   dbPromise = null;
-  await req2p(indexedDB.deleteDatabase(DB_NAME));
+  await req2p(indexedDB.deleteDatabase(dbNome));
+}
+
+// ---------- dados de antes das contas ----------
+
+// Lê o banco antigo, se existir neste aparelho: { analises, config } ou null
+export async function dadosLegados() {
+  if (indexedDB.databases && !(await indexedDB.databases()).some((d) => d.name === LEGADO)) return null;
+  const db = await new Promise((resolve) => {
+    const req = indexedDB.open(LEGADO);
+    // não existia: cancela para não criar um banco vazio
+    req.onupgradeneeded = () => req.transaction.abort();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+  if (!db) return null;
+  try {
+    if (!COLECOES.every((c) => db.objectStoreNames.contains(c))) return null;
+    const ler = (c) => new Promise((res, rej) => {
+      const r = db.transaction(c).objectStore(c).getAll();
+      r.onsuccess = () => res(r.result.filter((x) => !x.deleted));
+      r.onerror = () => rej(r.error);
+    });
+    const dados = { analises: await ler('analises'), config: await ler('config') };
+    return dados.analises.length || dados.config.length ? dados : null;
+  } finally {
+    db.close();
+  }
+}
+
+// Copia os dados antigos para o banco do usuário (marcados para enviar à conta dele)
+export async function importarLegado({ analises, config }) {
+  for (const r of [...analises.map((a) => ['analises', a]), ...config.map((c) => ['config', c])]) {
+    const { _dirty, ...dados } = r[1];
+    await salvar(r[0], dados);
+  }
+}
+
+export async function apagarLegado() {
+  await req2p(indexedDB.deleteDatabase(LEGADO));
 }

@@ -1,5 +1,7 @@
 import * as sync from './sync.js';
 import * as store from './store.js';
+import * as auth from './auth.js';
+import * as conta from './views/auth.js';
 import * as lista from './views/lista.js';
 import * as analise from './views/analise.js';
 import * as relatorio from './views/relatorio.js';
@@ -7,8 +9,14 @@ import * as adubos from './views/adubos.js';
 import * as tabelas from './views/tabelas.js';
 import * as config from './views/config.js';
 import { icone } from './icons.js';
+import { confirmar, toast } from './ui.js';
 
 const main = document.getElementById('app');
+const ROTAS_CONTA = ['entrar', 'cadastro', 'esqueci', 'redefinir'];
+// Quem está conectado neste aparelho (sem conta: só as telas de entrar/cadastro)
+const usuario = auth.usuarioAtual();
+if (usuario) store.usarUsuario(usuario.id);
+document.body.classList.toggle('sem-conta', !usuario);
 
 const MENU = [
   ['', 'analises', 'Análises', 'Análises'],
@@ -27,6 +35,10 @@ async function rotear() {
   if (typeof limpar === 'function') limpar();
   limpar = null;
 
+  if (!usuario && !ROTAS_CONTA.includes(partes[0])) {
+    location.replace('#/entrar');
+    return;
+  }
   if (partes[0] === 'nova') {
     const id = await analise.criarNova();
     location.replace(`#/analise/${id}/laudo`);
@@ -39,6 +51,18 @@ async function rotear() {
   const mudouDeTela = rotaAtual.split('/')[0] !== partes[0] || rotaAtual.split('/')[1] !== partes[1];
   rotaAtual = partes.join('/');
   if (mudouDeTela) window.scrollTo(0, 0);
+
+  const telaDeConta = ROTAS_CONTA.includes(partes[0]);
+  document.body.classList.toggle('sem-conta', telaDeConta);
+  if (telaDeConta) {
+    try {
+      await conta.render(el, { tela: partes[0], token: partes[1], usuario });
+    } catch (e) {
+      console.error(e);
+      el.innerHTML = `<div class="aviso erro">Erro ao abrir a tela: ${e.message}</div>`;
+    }
+    return;
+  }
 
   document.querySelectorAll('.nav a').forEach((a) => {
     const alvo = a.getAttribute('href').slice(2);
@@ -66,7 +90,7 @@ async function atualizarBadge() {
   let txt, cls;
   if (!i.online) { txt = i.pendentes ? `Offline · ${i.pendentes} a enviar` : 'Offline'; cls = 'off'; }
   else if (i.rodando) { txt = 'Sincronizando...'; cls = 'run'; }
-  else if (i.ultimoErro === sync.CHAVE_INVALIDA) { txt = 'Informar chave'; cls = 'err'; }
+  else if (i.ultimoErro === sync.SESSAO_EXPIRADA) { txt = 'Entrar novamente'; cls = 'err'; }
   else if (i.ultimoErro) { txt = 'Erro no sync'; cls = 'err'; }
   else if (i.pendentes) { txt = `${i.pendentes} a enviar`; cls = 'pend'; }
   else { txt = 'Sincronizado'; cls = 'ok'; }
@@ -77,7 +101,7 @@ async function atualizarBadge() {
 
 document.getElementById('syncBadge').addEventListener('click', async () => {
   const i = await sync.info();
-  if (i.ultimoErro === sync.CHAVE_INVALIDA) location.hash = '#/config';
+  if (i.ultimoErro === sync.SESSAO_EXPIRADA) location.hash = '#/entrar';
   else sync.sincronizar();
 });
 sync.estado.addEventListener('mudou', atualizarBadge);
@@ -98,13 +122,29 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW não registrado', e));
 }
 
-// Link de convite com a chave: https://.../?chave=XXXX -> guarda e limpa a barra de endereço
-const chaveDoLink = new URLSearchParams(location.search).get('chave');
-if (chaveDoLink) {
-  await store.setMeta('syncToken', chaveDoLink);
-  history.replaceState(null, '', location.pathname + location.hash);
+// Dados salvos no aparelho antes de existirem contas: oferece passar para esta conta (uma vez)
+async function oferecerDadosAntigos() {
+  if (await store.getMeta('legadoVerificado', false)) return;
+  const dados = await store.dadosLegados();
+  await store.setMeta('legadoVerificado', true);
+  if (!dados) return;
+  const n = dados.analises.length;
+  if (!confirmar(`Este aparelho tem ${n} análise(s) e preços salvos antes das contas existirem.
+
+Passar para a conta de ${usuario.nome} (${usuario.email})?`)) return;
+  await store.importarLegado(dados);
+  await store.apagarLegado();
+  toast(`${n} análise(s) passadas para a sua conta`);
+  rotear();
 }
 
 rotear();
-sync.iniciar();
-atualizarBadge();
+if (usuario) {
+  sync.iniciar();
+  atualizarBadge();
+  oferecerDadosAntigos().catch((e) => console.warn('dados antigos', e));
+  // renova a sessão e atualiza o nome (se mudou em outro aparelho)
+  if (navigator.onLine) {
+    auth.conferirSessao().then((u) => { if (u) auth.guardarUsuario(u); }).catch(() => {});
+  }
+}

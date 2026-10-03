@@ -48,6 +48,7 @@ p { margin: 0 0 8px; }
 small, .small { font-size: .8125rem; }
 .muted { color: var(--muted); }
 .ic { flex-shrink: 0; display: block; }
+[hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- estrutura ---------- */
@@ -445,3 +446,31 @@ details.solto { border: 0; margin: 0; padding: 0; }
 .barra-sel .btn.perigo-escuro { background: transparent; border-color: rgba(255,255,255,.2); color: #ffb4ab; }
 .barra-sel .btn.perigo-escuro:hover { background: rgba(255,255,255,.08); }
 .toast { width: max-content; } .toast span { white-space: nowrap; }
+
+/* ---------- telas de conta (entrar, cadastro, senha) ---------- */
+body.sem-conta { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+body.sem-conta .topo, body.sem-conta .nav { display: none; }
+.auth { max-width: 400px; margin: 0 auto; padding: 32px 0 24px; }
+.auth-marca { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; font-weight: 750; font-size: 1.375rem; letter-spacing: -.01em; }
+.auth-marca img { border-radius: 10px; }
+.auth-card { padding: 24px 20px; }
+.auth-card h1 { margin-bottom: 4px; }
+.auth-sub { margin-bottom: 18px; overflow-wrap: anywhere; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form .btn.bloco { margin-top: 4px; }
+.auth-link { align-self: center; font-size: .875rem; font-weight: 600; padding: 6px; }
+.auth-rodape { text-align: center; color: var(--text-2); font-size: .9375rem; margin-top: 18px; }
+.auth-rodape a { font-weight: 650; }
+.senha-campo { position: relative; }
+.senha-campo input { width: 100%; padding-right: 84px; }
+.senha-ver {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  min-height: 34px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent;
+  font: inherit; font-size: .8125rem; font-weight: 600; color: var(--primary); cursor: pointer;
+}
+.senha-ver:hover { background: var(--primary-50); }
+.senha-ver:focus-visible { outline: 3px solid var(--primary-100); }
+@media (min-width: 900px) {
+  body.sem-conta { padding: 0; }
+  .auth { padding-top: 72px; }
+}

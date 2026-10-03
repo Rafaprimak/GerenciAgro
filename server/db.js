@@ -1,67 +1,53 @@
-// Banco de dados do servidor (SQLite embutido no Node >= 22.5).
-// Cada registro guarda o JSON completo + updatedAt (para "vence o mais recente")
-// + seq (contador global, usado pelos celulares para buscar só o que mudou).
+// Banco do servidor Node (SQLite embutido). Mesma interface assíncrona do adaptador do D1
+// em worker/index.js, para as rotas (server/api.js) serem um código só.
+//   first(sql, ...params) -> linha ou null     all(sql, ...params) -> linhas
+//   run(sql, ...params)                         batch([[sql, params], ...]) -> tudo numa transação
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export function abrirBanco(arquivo) {
-  fs.mkdirSync(path.dirname(arquivo), { recursive: true });
+const PASTA_MIGRACOES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+
+// SQLite embutido no Node >= 22.5. Aplica os mesmos arquivos de migrations/ usados no D1.
+export function abrirSqlite(arquivo) {
+  if (arquivo !== ':memory:') fs.mkdirSync(path.dirname(arquivo), { recursive: true });
   const db = new DatabaseSync(arquivo);
   db.exec(`
     PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS records (
-      collection TEXT NOT NULL,
-      id TEXT NOT NULL,
-      data TEXT NOT NULL,
-      updated_at INTEGER NOT NULL,
-      deleted INTEGER NOT NULL DEFAULT 0,
-      seq INTEGER NOT NULL,
-      PRIMARY KEY (collection, id)
-    );
-    CREATE INDEX IF NOT EXISTS idx_records_seq ON records(seq);
+    PRAGMA foreign_keys = ON;
+    CREATE TABLE IF NOT EXISTS _migracoes (nome TEXT PRIMARY KEY);
   `);
+  const feitas = new Set(db.prepare('SELECT nome FROM _migracoes').all().map((l) => l.nome));
+  for (const nome of fs.readdirSync(PASTA_MIGRACOES).filter((n) => n.endsWith('.sql')).sort()) {
+    if (feitas.has(nome)) continue;
+    db.exec('BEGIN');
+    try {
+      db.exec(fs.readFileSync(path.join(PASTA_MIGRACOES, nome), 'utf8'));
+      db.prepare('INSERT INTO _migracoes (nome) VALUES (?)').run(nome);
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw new Error(`Migração ${nome} falhou: ${e.message}`);
+    }
+  }
 
-  const maxSeq = () => db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
-  const buscar = db.prepare('SELECT updated_at FROM records WHERE collection = ? AND id = ?');
-  const gravar = db.prepare(`
-    INSERT INTO records (collection, id, data, updated_at, deleted, seq) VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(collection, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
-      deleted = excluded.deleted, seq = excluded.seq`);
-  const desde = db.prepare('SELECT collection, id, data, updated_at, deleted, seq FROM records WHERE seq > ? ORDER BY seq LIMIT 5000');
-
+  const st = (sql) => db.prepare(sql);
   return {
-    // Aplica alterações vindas de um celular e devolve o que mudou desde `since`
-    sincronizar(since, changes, colecoesPermitidas) {
+    async first(sql, ...p) { return st(sql).get(...p) ?? null; },
+    async all(sql, ...p) { return st(sql).all(...p); },
+    async run(sql, ...p) { st(sql).run(...p); },
+    async batch(comandos) {
       db.exec('BEGIN');
       try {
-        let seq = maxSeq();
-        for (const c of changes) {
-          if (!colecoesPermitidas.includes(c.collection) || typeof c.id !== 'string' || !c.id) continue;
-          const atual = buscar.get(c.collection, c.id);
-          const updatedAt = Number(c.updatedAt) || Date.now();
-          if (atual && atual.updated_at > updatedAt) continue; // servidor tem versão mais nova
-          // excluído: guarda só a marca (os outros aparelhos precisam saber que sumiu), sem o conteúdo
-          gravar.run(c.collection, c.id, JSON.stringify(c.deleted ? {} : c.data ?? {}), updatedAt, c.deleted ? 1 : 0, ++seq);
-        }
+        for (const [sql, p = []] of comandos) st(sql).run(...p);
         db.exec('COMMIT');
       } catch (e) {
         db.exec('ROLLBACK');
         throw e;
       }
-      const linhas = desde.all(Number(since) || 0);
-      return {
-        seq: linhas.length ? linhas[linhas.length - 1].seq : maxSeq(),
-        changes: linhas.map((l) => ({
-          collection: l.collection, id: l.id, data: JSON.parse(l.data), updatedAt: l.updated_at, deleted: !!l.deleted,
-        })),
-      };
     },
-    contar() {
-      return db.prepare('SELECT collection, COUNT(*) AS n FROM records WHERE deleted = 0 GROUP BY collection').all();
-    },
-    fechar() {
-      db.close();
-    },
+    bruto: db, // acesso direto (testes)
+    fechar() { db.close(); },
   };
 }

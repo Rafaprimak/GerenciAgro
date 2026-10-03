@@ -6,25 +6,13 @@
 import * as store from './store.js';
 
 export const estado = new EventTarget();
-export const CHAVE_INVALIDA = 'Chave de acesso ausente ou inválida. Informe em Ajustes.';
+export const SESSAO_EXPIRADA = 'Sessão expirada. Entre novamente para sincronizar.';
 let rodando = false;
 let ultimoErro = null;
 let timer = null;
 
 function emitir() {
   estado.dispatchEvent(new Event('mudou'));
-}
-
-export async function servidorBase() {
-  const url = (await store.getMeta('serverUrl', '')) || '';
-  return url.replace(/\/+$/, '');
-}
-
-async function cabecalhos() {
-  const h = { 'Content-Type': 'application/json' };
-  const token = await store.getMeta('syncToken', '');
-  if (token) h['X-Sync-Token'] = token;
-  return h;
 }
 
 export async function info() {
@@ -48,12 +36,13 @@ export async function sincronizar() {
       const { _dirty, ...dados } = registro;
       return { collection: colecao, id: registro.id, updatedAt: registro.updatedAt, deleted: !!registro.deleted, data: dados };
     });
-    const resp = await fetch(`${await servidorBase()}/api/sync`, {
+    // a sessão vai no cookie (HttpOnly), definido pelo servidor ao entrar
+    const resp = await fetch('/api/sync', {
       method: 'POST',
-      headers: await cabecalhos(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ since, changes }),
     });
-    if (!resp.ok) throw new Error(resp.status === 401 ? CHAVE_INVALIDA : `Servidor respondeu ${resp.status}`);
+    if (!resp.ok) throw new Error(resp.status === 401 ? SESSAO_EXPIRADA : `Servidor respondeu ${resp.status}`);
     const r = await resp.json();
     for (const c of changes) await store.marcarLimpo(c.collection, c.id, c.updatedAt);
     let recebidos = 0;
