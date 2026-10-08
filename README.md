@@ -22,6 +22,24 @@ não aparecem para os outros.
 Gera o **relatório** no formato do exemplo da planilha (por área + resumo operacional),
 que pode ser impresso/salvo em PDF ou compartilhado no WhatsApp.
 
+## Planejamento forrageiro
+
+Menu **Forragem**. Faz o que a planilha *Planejamento Forrageiro* v2.2.4 (UFPR, Prof. Anibal de Moraes) faz,
+nos cenários **atual** e **proposto**:
+
+1. **Pastagens**: forrageira (26 da tabela da planilha), condição (degradada/média/ótima), área e aproveitamento
+   → produção de matéria seca mês a mês, pela distribuição do Sul ou do Norte do Paraná.
+2. **Rebanho**: 8 categorias com nº de animais, mês de entrada, peso inicial/final, consumo (% PV) e ganho por estação
+   → consumo mês a mês (o animal sai do pasto ao passar do peso final).
+3. **Balanço**: oferta x demanda por mês e por estação, meses com falta de pasto, capacidade de suporte
+   e lotação (U.A./ha), gráfico e comparação atual x proposto. Imprime/salva em PDF e compartilha o resumo.
+
+O cálculo (`public/js/forragem.js`) segue as fórmulas da planilha à risca e foi conferido contra o Excel
+em dois casos (`test/forragem.test.js`), inclusive nas particularidades dela: a produção por hectare vem sempre
+da tabela do Sul (a região muda só a distribuição mensal), o consumo total não soma as novilhas adultas,
+a lotação prática usa U.A. de 450 kg e a área do cenário atual, a lotação teórica é a média simples das pastagens,
+campo em branco vale zero e são no máximo 5 pastagens.
+
 ## Rodar
 
 Requer Node.js 22.5 ou mais novo (usa o SQLite embutido do Node).
@@ -104,7 +122,8 @@ Depois de aberto uma vez, o app funciona sem internet. Em Ajustes, use
 ```
 public/            app (roda no celular)
   js/calc.js         motor de cálculo (passos 2 a 7)
-  js/data/           tabelas do manual (interpretação, culturas, adubos)
+  js/forragem.js     planejamento forrageiro (oferta x demanda de pasto)
+  js/data/           tabelas do manual (interpretação, culturas, adubos) e das forrageiras
   js/extract/        leitura de PDF/foto
   js/store.js        banco local (IndexedDB), um por usuário
   js/sync.js         sincronização

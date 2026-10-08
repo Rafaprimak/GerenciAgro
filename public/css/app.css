@@ -474,3 +474,65 @@ body.sem-conta .topo, body.sem-conta .nav { display: none; }
   body.sem-conta { padding: 0; }
   .auth { padding-top: 72px; }
 }
+
+/* ---------- planejamento forrageiro ---------- */
+.alternar { display: flex; gap: 4px; padding: 4px; margin-bottom: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.alternar a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border-radius: 9px; text-decoration: none; font-weight: 650; font-size: .9375rem; color: var(--text-2); }
+.alternar a small { font-weight: 500; color: var(--muted); }
+.alternar a:hover { background: var(--surface-2); }
+.alternar a.ativo { background: var(--primary); color: #fff; }
+.alternar a.ativo small { color: rgba(255,255,255,.8); }
+.alternar a:focus-visible { outline: 3px solid var(--primary-100); }
+
+.bloco-item { border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; background: var(--surface); }
+.bloco-topo { display: flex; align-items: flex-end; gap: 10px; }
+.bloco-nome { flex: 1; font-size: .9375rem; align-self: center; }
+.bloco-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 12px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: .8125rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.bloco-rodape:empty { display: none; }
+.grid-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* rótulo que quebra em duas linhas não desalinha os campos da mesma linha */
+.alinhado > .campo { justify-content: flex-end; }
+@media (min-width: 640px) { .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.campo-n { width: 150px; flex-shrink: 0; }
+.campo-n .entrada input { padding-right: 70px; text-align: right; }
+.categoria .cat-detalhes { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--border); }
+.categoria.inativo { background: var(--surface-2); }
+.categoria.inativo .cat-detalhes { display: none; }
+.categoria.inativo .bloco-nome { color: var(--text-2); font-weight: 600; }
+
+.resumo-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; padding: 12px 14px; }
+.resumo-mini dt { font-size: .75rem; color: var(--muted); font-weight: 600; }
+.resumo-mini dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.resumo-mini dd small { font-weight: 500; color: var(--muted); font-size: .6875rem; }
+.neg { color: var(--danger); }
+
+.tabela.mensal td:first-child, .tabela.mensal th:first-child { position: sticky; left: 0; background: var(--surface); min-width: 150px; z-index: 1; }
+.tabela.mensal tr.grupo td { padding-top: 14px; font-size: .6875rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 0; }
+.tabela.mensal tr.total td { background: var(--surface-2); font-weight: 650; }
+.tabela.mensal tr.total td:first-child { background: var(--surface-2); }
+
+.grafico { position: relative; }
+.graf-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: .8125rem; color: var(--text-2); }
+.graf-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.chave-linha { display: inline-block; width: 14px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+.chave-faixa { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(208, 59, 59, .14); flex-shrink: 0; }
+.graf-area { position: relative; }
+.graf-area svg { display: block; touch-action: pan-y; }
+.graf-area svg:focus-visible { outline: 3px solid var(--primary-100); border-radius: 6px; }
+.graf-area text { font-family: inherit; font-variant-numeric: tabular-nums; }
+.graf-dica { position: absolute; z-index: 2; pointer-events: none; min-width: 150px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 16px rgba(16, 24, 20, .12); font-size: .8125rem; }
+.graf-dica b { display: block; margin-bottom: 4px; font-size: .75rem; color: var(--muted); font-weight: 600; }
+.graf-dica div { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.graf-dica strong { font-variant-numeric: tabular-nums; }
+.graf-dica span { color: var(--muted); }
+.graf-dica .graf-dica-alerta { margin-top: 4px; color: var(--danger); font-weight: 600; }
+
+.so-print { display: none; }
+@media print {
+  .so-print { display: block; }
+  .aba-conteudo .card { box-shadow: none; break-inside: avoid; }
+  .tabela.mensal td:first-child, .tabela.mensal th:first-child { position: static; }
+}

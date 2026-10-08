@@ -113,6 +113,10 @@ test('sincronização: vence o mais recente e a exclusão propaga', async () => 
   const del = (await s.sync(ana, final.seq, [{ collection: 'analises', id: 'x1', updatedAt: 4000, deleted: true, data: { info: { talhao: 'B' } } }])).body;
   assert.equal(del.changes[0].deleted, true);
   assert.deepEqual(del.changes[0].data, {}, 'conteúdo da análise excluída não fica no servidor');
+
+  // planejamento forrageiro também sincroniza
+  await s.sync(ana, 0, [{ collection: 'planejamentos', id: 'p1', updatedAt: 1500, data: { nome: 'Sítio Boa Vista' } }]);
+  assert.equal((await s.sync(ana, 0)).body.changes.find((c) => c.collection === 'planejamentos')?.data.nome, 'Sítio Boa Vista');
 });
 
 test('esqueci a senha: link por e-mail, uso único, encerra as sessões', async () => {

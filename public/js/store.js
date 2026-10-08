@@ -3,8 +3,9 @@
 // Cada usuário tem o próprio banco no aparelho (gerenciagro-<id do usuário>).
 
 const LEGADO = 'gerenciagro'; // banco de antes das contas (um só para todos)
-const DB_VERSION = 1;
-export const COLECOES = ['analises', 'config'];
+const DB_VERSION = 2; // 2: coleção planejamentos (planejamento forrageiro)
+export const COLECOES = ['analises', 'config', 'planejamentos'];
+const COLECOES_LEGADO = ['analises', 'config'];
 
 let dbNome = null;
 let dbPromise;
@@ -21,12 +22,18 @@ function abrir() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(dbNome, DB_VERSION);
-      req.onupgradeneeded = () => {
+      req.onupgradeneeded = (e) => {
         const db = req.result;
         for (const c of COLECOES) if (!db.objectStoreNames.contains(c)) db.createObjectStore(c, { keyPath: 'id' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'k' });
+        // a versão anterior do app pulava as coleções novas no sync: baixa tudo de novo
+        if (e.oldVersion > 0 && e.oldVersion < 2) req.transaction.objectStore('meta').put({ k: 'syncSeq', v: 0 });
       };
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        // outra aba abriu uma versão nova do banco: fecha esta conexão para não travar a atualização
+        req.result.onversionchange = () => { req.result.close(); dbPromise = null; };
+        resolve(req.result);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -139,7 +146,7 @@ export async function dadosLegados() {
   });
   if (!db) return null;
   try {
-    if (!COLECOES.every((c) => db.objectStoreNames.contains(c))) return null;
+    if (!COLECOES_LEGADO.every((c) => db.objectStoreNames.contains(c))) return null;
     const ler = (c) => new Promise((res, rej) => {
       const r = db.transaction(c).objectStore(c).getAll();
       r.onsuccess = () => res(r.result.filter((x) => !x.deleted));

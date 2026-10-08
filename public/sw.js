@@ -1,6 +1,6 @@
 // Service worker: guarda o app no aparelho para abrir sem internet.
 // Ao mudar arquivos do app, aumente VERSAO para forçar a atualização.
-const VERSAO = 'v5';
+const VERSAO = 'v8';
 const CACHE_APP = `gerenciagro-app-${VERSAO}`;
 const CACHE_VENDOR = 'gerenciagro-vendor';
 
@@ -15,6 +15,8 @@ const APP = [
   'js/app.js',
   'js/auth.js',
   'js/calc.js',
+  'js/forragem.js',
+  'js/grafico.js',
   'js/config.js',
   'js/icons.js',
   'js/store.js',
@@ -22,6 +24,7 @@ const APP = [
   'js/ui.js',
   'js/data/adubos.js',
   'js/data/culturas.js',
+  'js/data/forrageiras.js',
   'js/data/interpretacao.js',
   'js/extract/index.js',
   'js/extract/parsers.js',
@@ -30,6 +33,7 @@ const APP = [
   'js/views/auth.js',
   'js/views/config.js',
   'js/views/lista.js',
+  'js/views/planejamento.js',
   'js/views/relatorio.js',
   'js/views/tabelas.js',
 ];

@@ -11,7 +11,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { extrairComClaude } from './extract-ai.js';
 import { criarCifra, hashSenha, conferirSenha, novoToken, sha256 } from './seguranca.js';
 
-const COLECOES = ['analises', 'config'];
+const COLECOES = ['analises', 'config', 'planejamentos'];
 const TIPOS_OK = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 const COOKIE = 'ga_sessao';
 const MIN = 60 * 1000;

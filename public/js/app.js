@@ -5,6 +5,7 @@ import * as conta from './views/auth.js';
 import * as lista from './views/lista.js';
 import * as analise from './views/analise.js';
 import * as relatorio from './views/relatorio.js';
+import * as planejamento from './views/planejamento.js';
 import * as adubos from './views/adubos.js';
 import * as tabelas from './views/tabelas.js';
 import * as config from './views/config.js';
@@ -20,6 +21,7 @@ document.body.classList.toggle('sem-conta', !usuario);
 
 const MENU = [
   ['', 'analises', 'Análises', 'Análises'],
+  ['forragem', 'pasto', 'Forragem', 'Planejamento forrageiro'],
   ['adubos', 'adubos', 'Adubos', 'Adubos e preços'],
   ['tabelas', 'tabelas', 'Tabelas', 'Tabelas do manual'],
   ['config', 'ajustes', 'Ajustes', 'Ajustes'],
@@ -44,6 +46,11 @@ async function rotear() {
     location.replace(`#/analise/${id}/laudo`);
     return;
   }
+  if (partes[0] === 'novo-planejamento') {
+    const id = await planejamento.criarNovo();
+    location.replace(`#/planejamento/${id}/atual/pastagens`);
+    return;
+  }
   // container novo a cada tela (evita acumular listeners)
   const el = document.createElement('div');
   el.className = 'view';
@@ -66,13 +73,16 @@ async function rotear() {
 
   document.querySelectorAll('.nav a').forEach((a) => {
     const alvo = a.getAttribute('href').slice(2);
-    a.classList.toggle('ativo', alvo === partes[0] || (alvo === '' && ['', 'analise', 'relatorio', 'nova'].includes(partes[0])));
+    a.classList.toggle('ativo', alvo === partes[0] || (alvo === '' && ['', 'analise', 'relatorio', 'nova'].includes(partes[0]))
+      || (alvo === 'forragem' && partes[0] === 'planejamento'));
   });
 
   try {
     switch (partes[0]) {
       case 'analise': limpar = await analise.render(el, { id: partes[1], aba: partes[2] || 'laudo' }); break;
       case 'relatorio': limpar = await relatorio.render(el, { ids: partes[1] || '' }); break;
+      case 'forragem': limpar = await planejamento.renderLista(el); break;
+      case 'planejamento': limpar = await planejamento.render(el, { id: partes[1], cenario: partes[2], etapa: partes[3] }); break;
       case 'adubos': limpar = await adubos.render(el); break;
       case 'tabelas': limpar = await tabelas.render(el); break;
       case 'config': limpar = await config.render(el); break;
@@ -108,7 +118,7 @@ sync.estado.addEventListener('mudou', atualizarBadge);
 store.eventos.addEventListener('mudou', (e) => {
   atualizarBadge();
   // dados novos vindos do servidor: redesenha a lista
-  if (e.detail?.remoto && (location.hash === '' || location.hash === '#/')) rotear();
+  if (e.detail?.remoto && ['', '#/', '#/forragem'].includes(location.hash)) rotear();
 });
 window.addEventListener('hashchange', rotear);
 

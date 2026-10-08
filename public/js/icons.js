@@ -27,6 +27,10 @@ const P = {
   ia: '<path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="m5.6 5.6 2.1 2.1"/><path d="m16.3 16.3 2.1 2.1"/><path d="m5.6 18.4 2.1-2.1"/><path d="m16.3 7.7 2.1-2.1"/><circle cx="12" cy="12" r="3"/>',
   selecionar: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/>',
   calcario: '<path d="M3 20h18"/><path d="M5 20 9 8l3 5 3-3 4 10"/>',
+  pasto: '<path d="M2 21h20"/><path d="M5 21c0-4-1-7-3-9"/><path d="M8 21c0-6 1-11 5-15"/><path d="M13 21c0-4 1-8 5-11"/><path d="M18 21c0-3 1-5 4-6"/>',
+  grafico: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
+  vaca: '<path d="M4 9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M8 17v4"/><path d="M16 17v4"/><path d="M7 6 5 3"/><path d="m17 6 2-3"/><circle cx="9.5" cy="11" r=".5"/><circle cx="14.5" cy="11" r=".5"/>',
+  copiar: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/>',
   dinheiro: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
 };
 
