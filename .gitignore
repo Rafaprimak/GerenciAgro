@@ -5,3 +5,6 @@ public/vendor/
 .dev.vars
 .chave-sincronizacao
 .chave-dados
+
+# planilha de referência do planejamento forrageiro (fica só no computador)
+Planejamento Forrageiro*.xls
